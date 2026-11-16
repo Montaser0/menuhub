@@ -237,8 +237,8 @@ export function PublicMenuNavigation({
                     <ImageIcon className="size-8 opacity-50" />
                   </span>
                 )}
-                <span className="pointer-events-none absolute inset-0 bg-black/10" />
-                <span className="pointer-events-none relative z-10 line-clamp-2 px-1.5 text-center text-[11px] font-bold leading-tight text-white drop-shadow sm:px-2 sm:text-[12px] lg:text-[13px]">
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 line-clamp-2 px-1.5 pb-1.5 text-center text-[11px] font-bold leading-tight text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)] sm:px-2 sm:text-[12px] lg:text-[13px]">
                   {category.name_ar}
                 </span>
               </button>
