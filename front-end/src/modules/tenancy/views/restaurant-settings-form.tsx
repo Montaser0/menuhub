@@ -13,6 +13,7 @@ import { Input } from "@/core/ui/input";
 import { Switch } from "@/core/ui/switch";
 import { Textarea } from "@/core/ui/textarea";
 import { useToast } from "@/core/ui/toast";
+import { DisplayCurrenciesEditor } from "@/modules/tenancy/components/restaurants/display-currencies-editor";
 import type { Restaurant } from "@/modules/tenancy/types";
 
 export function RestaurantSettingsForm({ restaurant }: { restaurant: Restaurant }) {
@@ -28,6 +29,9 @@ export function RestaurantSettingsForm({ restaurant }: { restaurant: Restaurant 
   const [chatbotEnabled, setChatbotEnabled] = useState(restaurant.chatbot_enabled !== false);
   const [chatbotName, setChatbotName] = useState(restaurant.chatbot_name ?? "");
   const [chatbotWelcome, setChatbotWelcome] = useState(restaurant.chatbot_welcome ?? "");
+  const [displayCurrencies, setDisplayCurrencies] = useState<string[]>(
+    restaurant.display_currencies ?? []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +48,7 @@ export function RestaurantSettingsForm({ restaurant }: { restaurant: Restaurant 
       address,
       latitude: latitude ? Number(latitude) : null,
       longitude: longitude ? Number(longitude) : null,
+      display_currencies: displayCurrencies,
       delivery_enabled: deliveryEnabled,
       chatbot_enabled: chatbotEnabled,
       chatbot_name: chatbotName.trim() || null,
@@ -92,6 +97,13 @@ export function RestaurantSettingsForm({ restaurant }: { restaurant: Restaurant 
         <p className="mt-2 text-xs text-zinc-500">
           عند الإيقاف لن يظهر خيار التوصيل للزبائن في صفحة الطلب.
         </p>
+      </div>
+      <div className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4">
+        <DisplayCurrenciesEditor
+          baseCurrency={restaurant.currency}
+          selected={displayCurrencies}
+          onChange={setDisplayCurrencies}
+        />
       </div>
       <div className="rounded-2xl border border-zinc-200 bg-white p-4">
         <Switch

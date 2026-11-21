@@ -39,6 +39,10 @@ export function currencyLabel(currency: string): string {
   return CURRENCY_AR[currency] ?? currency;
 }
 
+export function currencyName(currency: string): string {
+  return MENU_CURRENCIES.find((item) => item.value === currency)?.label ?? currency;
+}
+
 export function currencySymbol(currency: string): string {
   return CURRENCY_SYMBOL[currency] ?? currencyLabel(currency);
 }

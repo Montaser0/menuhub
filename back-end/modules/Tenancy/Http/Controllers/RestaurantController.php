@@ -91,6 +91,8 @@ class RestaurantController extends ApiController
             'timezone' => ['sometimes', 'timezone:all'],
             'default_language' => ['sometimes', 'string', 'max:10'],
             'currency' => ['sometimes', Rule::in(config('menuhub.currencies'))],
+            'display_currencies' => ['nullable', 'array', 'max:5'],
+            'display_currencies.*' => ['required', 'distinct', Rule::in(config('menuhub.currencies'))],
             'delivery_enabled' => ['sometimes', 'boolean'],
             'chatbot_enabled' => ['sometimes', 'boolean'],
             'chatbot_name' => ['nullable', 'string', 'max:80'],
@@ -99,6 +101,14 @@ class RestaurantController extends ApiController
 
         if (isset($data['slug'])) {
             $data['slug'] = strtolower(trim($data['slug']));
+        }
+
+        if (array_key_exists('display_currencies', $data)) {
+            $base = $data['currency'] ?? $restaurant->currency;
+            $data['display_currencies'] = collect($data['display_currencies'] ?? [])
+                ->reject(fn (string $code) => $code === $base)
+                ->values()
+                ->all();
         }
 
         return $this->ok(new RestaurantResource($this->restaurants->update($restaurant, $data)));

@@ -1,5 +1,6 @@
 import { cn } from "@/core/lib/cn";
 import { currencySymbol, formatAmount } from "@/core/lib/format";
+import { useMenuCurrency } from "@/modules/storefront/lib/display-currency";
 import type { ProductWithRelations } from "@/modules/catalog/types";
 import { productPrimaryImageUrl } from "@/modules/storefront/components/product-image";
 import { PublicProductBadges } from "@/modules/storefront/components/public-product-badges";
@@ -28,8 +29,12 @@ export function PublicProductCard({
   const cap = stockCap(product);
   const remaining = showStockCount ? stockLabel(product) : null;
   const imageUrl = productPrimaryImageUrl(product);
-  const price = product.price;
-  const oldPrice = product.old_price;
+  const { convert } = useMenuCurrency();
+  const shownPrice = product.price != null ? convert(product.price, product.currency) : null;
+  const shownOld = product.old_price != null ? convert(product.old_price, product.currency) : null;
+  const price = shownPrice?.amount ?? null;
+  const oldPrice = shownOld?.amount ?? null;
+  const priceCurrency = shownPrice?.currency ?? product.currency;
   const showOldPrice = price != null && oldPrice != null && oldPrice > price;
 
   return (
@@ -71,12 +76,12 @@ export function PublicProductCard({
           {price != null ? (
             <p className="flex flex-col items-start gap-0.5">
               <span className="text-[13px] font-bold text-zinc-900 sm:text-sm" dir="ltr">
-                {currencySymbol(product.currency)}
+                {currencySymbol(priceCurrency)}
                 {formatAmount(price)}
               </span>
               {showOldPrice && oldPrice != null ? (
                 <span className="text-[11px] text-zinc-400 line-through sm:text-xs" dir="ltr">
-                  {currencySymbol(product.currency)}
+                  {currencySymbol(priceCurrency)}
                   {formatAmount(oldPrice)}
                 </span>
               ) : null}

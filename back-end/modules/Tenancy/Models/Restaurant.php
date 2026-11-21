@@ -41,7 +41,7 @@ class Restaurant extends BaseModel
         'name', 'slug', 'description', 'phone', 'whatsapp', 'email', 'logo_url',
         'cover_image_url', 'address', 'latitude', 'longitude', 'timezone',
         'default_language', 'currency', 'delivery_enabled', 'chatbot_enabled',
-        'chatbot_name', 'chatbot_welcome',
+        'chatbot_name', 'chatbot_welcome', 'display_currencies',
     ];
 
     protected function casts(): array
@@ -53,9 +53,25 @@ class Restaurant extends BaseModel
             'pos_mode' => PosMode::class,
             'delivery_enabled' => 'boolean',
             'chatbot_enabled' => 'boolean',
+            'display_currencies' => 'array',
             'latitude' => 'float',
             'longitude' => 'float',
         ];
+    }
+
+    /**
+     * Extra currencies customers can switch the menu to (codes, never the restaurant currency).
+     *
+     * @return list<string>
+     */
+    public function displayCurrencyCodes(): array
+    {
+        return collect($this->display_currencies ?? [])
+            ->map(fn ($item) => is_array($item) ? ($item['code'] ?? null) : $item)
+            ->filter(fn ($code) => is_string($code) && $code !== $this->currency)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function mall(): BelongsTo

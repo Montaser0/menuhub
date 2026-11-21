@@ -12,6 +12,7 @@ import { PublicProductBadges } from "@/modules/storefront/components/public-prod
 import { isShownUnavailable, stockCap } from "@/modules/catalog/lib/stock";
 import { PublicQtyStepper } from "@/modules/storefront/components/public-qty-stepper";
 import { PublicSheet } from "@/modules/storefront/components/public-sheet";
+import { useMenuCurrency } from "@/modules/storefront/lib/display-currency";
 
 function openingQuantity(product: ProductWithRelations | null, initialQuantity: number) {
   const cap = product ? stockCap(product) : undefined;
@@ -55,8 +56,13 @@ export function PublicProductModal({
   const images = useMemo(() => (product ? sortedImages(product) : []), [product]);
   const unavailable = product ? isShownUnavailable(product) : false;
   const cap = product ? stockCap(product) : undefined;
-  const oldPrice = product?.old_price;
-  const unitPrice = product?.price ?? null;
+  const { convert } = useMenuCurrency();
+  const shown = product && product.price != null ? convert(product.price, product.currency) : null;
+  const shownOld =
+    product && product.old_price != null ? convert(product.old_price, product.currency) : null;
+  const oldPrice = shownOld?.amount ?? null;
+  const unitPrice = shown?.amount ?? null;
+  const priceCurrency = shown?.currency ?? product?.currency ?? "SYP";
   const showOldPrice = unitPrice != null && oldPrice != null && oldPrice > unitPrice;
   const total = unitPrice != null ? unitPrice * quantity : 0;
   const activeImage = images[Math.min(activeIndex, Math.max(images.length - 1, 0))];
@@ -153,12 +159,12 @@ export function PublicProductModal({
           {unitPrice != null ? (
             <div className="mt-2 flex flex-wrap items-baseline gap-2">
               <span className="text-lg font-bold text-zinc-900" dir="ltr">
-                {currencySymbol(product.currency)}
+                {currencySymbol(priceCurrency)}
                 {formatAmount(unitPrice)}
               </span>
               {showOldPrice && oldPrice != null ? (
                 <span className="text-sm text-zinc-400 line-through" dir="ltr">
-                  {currencySymbol(product.currency)}
+                  {currencySymbol(priceCurrency)}
                   {formatAmount(oldPrice)}
                 </span>
               ) : null}
@@ -187,7 +193,7 @@ export function PublicProductModal({
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-bold">المجموع</span>
               <span className="text-base font-bold text-[var(--mh-primary)]">
-                {formatPrice(total, product.currency)}
+                {formatPrice(total, priceCurrency)}
               </span>
             </div>
           ) : null}

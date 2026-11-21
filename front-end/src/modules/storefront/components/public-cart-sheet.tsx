@@ -1,6 +1,7 @@
 "use client";
 
-import { formatPrice } from "@/core/lib/format";
+import { currencyName, formatPrice } from "@/core/lib/format";
+import { useMenuCurrency } from "@/modules/storefront/lib/display-currency";
 import type { ProductWithRelations } from "@/modules/catalog/types";
 import { PublicQtyStepper } from "@/modules/storefront/components/public-qty-stepper";
 import { stockCap } from "@/modules/catalog/lib/stock";
@@ -29,11 +30,19 @@ export function PublicCartSheet({
   onClear: () => void;
   onCheckout: () => void;
 }) {
+  const { convert, selected } = useMenuCurrency();
   const total = items.reduce(
-    (sum, item) => sum + (item.product.price ?? 0) * item.quantity,
+    (sum, item) =>
+      sum +
+      (item.product.price != null
+        ? convert(item.product.price, item.product.currency).amount
+        : 0) *
+        item.quantity,
     0
   );
-  const currency = items[0]?.product.currency ?? "SYP";
+  const first = items[0]?.product;
+  const currency = first ? convert(0, first.currency).currency : selected;
+  const converted = items.some((item) => item.product.currency !== currency);
 
   return (
     <PublicSheet
@@ -68,7 +77,8 @@ export function PublicCartSheet({
       ) : (
         <div className="grid gap-3">
           {items.map(({ product, quantity }) => {
-            const unit = product.price ?? 0;
+            const unit =
+              product.price != null ? convert(product.price, product.currency) : null;
             return (
               <div
                 key={product.id}
@@ -80,9 +90,9 @@ export function PublicCartSheet({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{product.name_ar}</p>
                   <p className="mt-0.5 text-[11px] text-zinc-500">
-                    {product.price == null
+                    {unit == null
                       ? `الكمية: ${quantity}`
-                      : `${formatPrice(unit, product.currency)} × ${quantity} = ${formatPrice(unit * quantity, product.currency)}`}
+                      : `${formatPrice(unit.amount, unit.currency)} × ${quantity} = ${formatPrice(unit.amount * quantity, unit.currency)}`}
                   </p>
                 </div>
                 <PublicQtyStepper
@@ -105,6 +115,12 @@ export function PublicCartSheet({
           <div className="rounded-xl bg-zinc-100 px-4 py-3 text-sm font-bold">
             المجموع: {formatPrice(total, currency)}
           </div>
+          {converted ? (
+            <p className="text-[11px] leading-relaxed text-zinc-500">
+              الأسعار بـ{currencyName(currency)} تقريبية حسب سعر الصرف المعتمد في المنيو، ويُسجَّل الطلب
+              بالعملة الأصلية للمنتجات.
+            </p>
+          ) : null}
         </div>
       )}
     </PublicSheet>

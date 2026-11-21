@@ -31,6 +31,10 @@ export type Restaurant = {
   timezone: string;
   default_language: string;
   currency: string;
+  /** Extra currencies customers can switch the public menu to. */
+  display_currencies?: string[];
+  /** Live rates: units of each currency per 1 `currency` (empty unless `display_currencies` is set). */
+  currency_rates?: Record<string, number>;
   status: RestaurantStatus;
   menu_status: MenuStatus;
   delivery_enabled: boolean;

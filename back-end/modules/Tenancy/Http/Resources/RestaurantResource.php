@@ -5,6 +5,7 @@ namespace Modules\Tenancy\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\Tenancy\Models\Restaurant;
+use Modules\Tenancy\Services\ExchangeRates;
 
 /** @mixin Restaurant */
 class RestaurantResource extends JsonResource
@@ -27,6 +28,11 @@ class RestaurantResource extends JsonResource
             'timezone' => $this->timezone,
             'default_language' => $this->default_language,
             'currency' => $this->currency,
+            'display_currencies' => $this->displayCurrencyCodes(),
+            // Live rates (units per 1 restaurant currency), only worked out when the switcher is on.
+            'currency_rates' => $this->displayCurrencyCodes()
+                ? (object) app(ExchangeRates::class)->relativeTo($this->currency)
+                : (object) [],
             'status' => $this->status->value,
             'menu_status' => $this->menu_status->value,
             'delivery_enabled' => $this->delivery_enabled,

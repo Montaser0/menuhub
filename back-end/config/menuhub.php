@@ -37,6 +37,15 @@ return [
 
     'currencies' => ['SYP', 'USD', 'TRY', 'EUR', 'SAR', 'AED'],
 
+    /*
+    | Live exchange rates for the customer currency switcher. The feed answers
+    | `{"rates": {"TRY": 38.5, ...}}` with units per 1 USD.
+    */
+    'exchange_rates' => [
+        'url' => env('EXCHANGE_RATES_URL', 'https://open.er-api.com/v6/latest/USD'),
+        'ttl' => (int) env('EXCHANGE_RATES_TTL', 6 * 3600),
+    ],
+
     'reserved_subdomains' => [
         'www', 'app', 'admin', 'api', 'dashboard', 'mail', 'support', 'help',
         'blog', 'docs', 'status', 'cdn', 'static', 'assets', 'login', 'signup',

@@ -23,6 +23,7 @@ export type UpdateRestaurantInput = {
   timezone?: string;
   default_language?: string;
   currency?: string;
+  display_currencies?: string[];
   /** Ignored: the menu status is owned by the menu publish/unpublish endpoints. */
   menu_status?: Restaurant["menu_status"];
   delivery_enabled?: boolean;

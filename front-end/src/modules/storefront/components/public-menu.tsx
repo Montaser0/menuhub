@@ -38,6 +38,11 @@ import type { CSSProperties } from "react";
 import { DASHBOARD_FONT_FAMILY } from "@/core/lib/font";
 import { MENU_BACKGROUND } from "@/modules/theming/lib/menu-background";
 import { menuShellClass } from "@/modules/storefront/lib/menu-layout";
+import { PublicCurrencySwitcher } from "@/modules/storefront/components/public-currency-switcher";
+import {
+  MenuCurrencyProvider,
+  useMenuCurrency,
+} from "@/modules/storefront/lib/display-currency";
 
 const FALLBACK_THEME: Pick<
   RestaurantTheme,
@@ -95,41 +100,40 @@ function productsForView(
   return matched;
 }
 
-function applyMenuFilters(products: ProductWithRelations[], filters: MenuFilters | null) {
+function applyMenuFilters(
+  products: ProductWithRelations[],
+  filters: MenuFilters | null,
+  priceOf: (product: ProductWithRelations) => number | null
+) {
   if (!filters) return products;
   const min = filters.min.trim() === "" ? null : Number(filters.min);
   const max = filters.max.trim() === "" ? null : Number(filters.max);
   const bounded = products.filter((product) => {
     if (filters.featured && !product.is_featured) return false;
     if (filters.discounted && !hasDiscount(product)) return false;
-    if (min != null && Number.isFinite(min) && (product.price == null || product.price < min)) return false;
-    if (max != null && Number.isFinite(max) && (product.price == null || product.price > max)) return false;
+    const price = priceOf(product);
+    if (min != null && Number.isFinite(min) && (price == null || price < min)) return false;
+    if (max != null && Number.isFinite(max) && (price == null || price > max)) return false;
     return true;
   });
   const sorted = [...bounded];
   if (filters.sort === "name") {
     sorted.sort((a, b) => a.name_ar.localeCompare(b.name_ar, "ar"));
   } else if (filters.sort === "price-asc") {
-    sorted.sort((a, b) => (a.price ?? Number.POSITIVE_INFINITY) - (b.price ?? Number.POSITIVE_INFINITY));
+    sorted.sort(
+      (a, b) => (priceOf(a) ?? Number.POSITIVE_INFINITY) - (priceOf(b) ?? Number.POSITIVE_INFINITY)
+    );
   } else if (filters.sort === "price-desc") {
-    sorted.sort((a, b) => (b.price ?? Number.NEGATIVE_INFINITY) - (a.price ?? Number.NEGATIVE_INFINITY));
+    sorted.sort(
+      (a, b) => (priceOf(b) ?? Number.NEGATIVE_INFINITY) - (priceOf(a) ?? Number.NEGATIVE_INFINITY)
+    );
   } else {
     sorted.sort((a, b) => Number(b.is_featured) - Number(a.is_featured) || a.sort_order - b.sort_order);
   }
   return sorted;
 }
 
-export function PublicMenu({
-  data,
-  loading = false,
-  notFound = false,
-  onSearch,
-  searchQuery = "",
-  onShare,
-  onProductOpen,
-  shareUrl,
-  className,
-}: {
+type PublicMenuProps = {
   data?: PublicMenuData;
   loading?: boolean;
   notFound?: boolean;
@@ -139,7 +143,34 @@ export function PublicMenu({
   onProductOpen?: (product: ProductWithRelations) => void;
   shareUrl?: string;
   className?: string;
-}) {
+};
+
+export function PublicMenu(props: PublicMenuProps) {
+  const restaurant = props.data?.restaurant;
+  return (
+    <MenuCurrencyProvider
+      menuKey={restaurant?.slug ?? ""}
+      base={restaurant?.currency || "SYP"}
+      currencies={restaurant?.display_currencies}
+      rates={restaurant?.currency_rates}
+    >
+      <PublicMenuContent {...props} />
+    </MenuCurrencyProvider>
+  );
+}
+
+function PublicMenuContent({
+  data,
+  loading = false,
+  notFound = false,
+  onSearch,
+  searchQuery = "",
+  onShare,
+  onProductOpen,
+  shareUrl,
+  className,
+}: PublicMenuProps) {
+  const { convert, selected: displayCurrency } = useMenuCurrency();
   const [selectedCategoryId, setSelectedCategoryId] = useState(ALL_CATEGORIES_ID);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
@@ -179,8 +210,11 @@ export function PublicMenu({
       : categories.find((category) => category.id === selectedCategoryId);
 
   const displayedProducts = useMemo(
-    () => applyMenuFilters(products, filters),
-    [products, filters]
+    () =>
+      applyMenuFilters(products, filters, (product) =>
+        product.price == null ? null : convert(product.price, product.currency).amount
+      ),
+    [products, filters, convert]
   );
 
   const sectionTitle = filters?.featured && filters.discounted
@@ -328,6 +362,8 @@ export function PublicMenu({
           />
         </div>
 
+        <PublicCurrencySwitcher className="mt-3" />
+
         <div className="mt-5">
           <PublicMenuNavigation
             categories={categories}
@@ -462,7 +498,7 @@ export function PublicMenu({
         open={filterOpen}
         onOpenChange={setFilterOpen}
         value={filters ?? EMPTY_MENU_FILTERS}
-        currency={data.restaurant.currency || "SYP"}
+        currency={displayCurrency}
         onApply={setFilters}
         onClear={() => setFilters(null)}
       />

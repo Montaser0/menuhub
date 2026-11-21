@@ -2,9 +2,12 @@
 
 namespace Modules\Tenancy\Tests;
 
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Modules\Shared\Enums\RestaurantRole;
 use Modules\Shared\Tests\ApiTestCase;
+use Modules\Tenancy\Services\ExchangeRates;
 
 class TenancyTest extends ApiTestCase
 {
@@ -66,6 +69,52 @@ class TenancyTest extends ApiTestCase
         $this->assertSame('PUBLISHED', $restaurant->menu_status->value);
     }
 
+    public function test_owner_picks_display_currencies_and_rates_are_fetched_automatically(): void
+    {
+        Cache::flush();
+        Http::fake([
+            '*' => Http::response(['rates' => ['USD' => 1, 'TRY' => 40, 'SAR' => 3.75, 'SYP' => 13000]]),
+        ]);
+        [$owner, $restaurant] = $this->makeRestaurant();
+        $restaurant->forceFill(['currency' => 'USD'])->save();
+        Sanctum::actingAs($owner);
+
+        $this->patchJson($this->api("restaurants/{$restaurant->id}"), [
+            'display_currencies' => ['TRY', 'USD', 'SAR'],
+        ])->assertOk()
+            ->assertJsonPath('data.display_currencies', ['TRY', 'SAR'])
+            ->assertJsonPath('data.currency_rates.TRY', 40)
+            ->assertJsonPath('data.currency_rates.USD', 1)
+            ->assertJsonPath('data.currency_rates.SYP', 13000);
+
+        // Rates are cached: a second read does not call the feed again.
+        $this->getJson($this->api("restaurants/{$restaurant->id}"))->assertOk();
+        Http::assertSentCount(1);
+
+        $this->patchJson($this->api("restaurants/{$restaurant->id}"), ['display_currencies' => ['XXX']])
+            ->assertStatus(422);
+        $this->patchJson($this->api("restaurants/{$restaurant->id}"), ['display_currencies' => ['TRY', 'TRY']])
+            ->assertStatus(422);
+
+        $this->patchJson($this->api("restaurants/{$restaurant->id}"), ['display_currencies' => null])
+            ->assertOk()
+            ->assertJsonCount(0, 'data.display_currencies')
+            ->assertJsonCount(0, 'data.currency_rates');
+    }
+
+    public function test_last_known_rates_are_used_when_the_feed_is_down(): void
+    {
+        Cache::flush();
+        Http::fakeSequence()
+            ->push(['rates' => ['USD' => 1, 'TRY' => 40]])
+            ->push('boom', 500);
+        $service = app(ExchangeRates::class);
+
+        $this->assertEquals(40.0, $service->relativeTo('USD')['TRY']);
+
+        Cache::forget('exchange-rates:fresh');
+        $this->assertEquals(40.0, $service->relativeTo('USD')['TRY']);
+    }
     public function test_reserved_and_taken_slugs_are_refused(): void
     {
         [$owner, $restaurant] = $this->makeRestaurant();
